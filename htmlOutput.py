@@ -314,8 +314,8 @@ def writePriCheckItem(hResFile, pid, resultDic):
     body += _writeResult_getlimit(resultDic['getlimit'])
     body += _writeResult_imgb(resultDic['imgb'])
     body += _writeResult_target(resultDic['target'])
-    body += _writeResult_idCheck(resultDic['idCheck'])
-    body += _writeResult_conditions_VSMessage(resultDic['VSMessage'])
+    #body += _writeResult_idCheck(resultDic['idCheck'])
+    #body += _writeResult_conditions_VSMessage(resultDic['VSMessage'])
     body += '</tr>\r\n'
     hResFile.write(body.encode(sys.getfilesystemencoding()))
 

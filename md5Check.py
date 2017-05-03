@@ -452,7 +452,7 @@ def closePriv(net,cForm,privID):
             updateURL = ref+'/privilege/updateProperty?pid=%s&status=0'%privID
             publishURL = ref+'/privilege/publish?pid=%s&status=0'%privID
             writeURl = ref+'/privilege/write'
-            prepareURl = ref+'/privilege/prepare'
+            prepareURl = ref+'/privilege/prepare?percent=100'
             
             cForm.outLogError(_tr('url is %s'%str(updateURL)))
             cForm.outLogError(_tr('user is %s'%str(user)))

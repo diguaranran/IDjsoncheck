@@ -339,20 +339,36 @@ def sendEmail(IDType, cnname, cForm):
         commutil.sendMail(From, To, subject.decode(sys.getfilesystemencoding()).encode('utf-8'), content.decode(sys.getfilesystemencoding()).encode('utf-8'))
     pass
 
-def checkDownload(urlAddr):
-    
+def checkDownload(urlAddr,cForm):
+    changehost = False
     if not os.path.exists(currerntDir+ r'\tempcab'):
         os.makedirs(currerntDir+ r'\tempcab')
         
-    tempPath = os.path.join(currerntDir,r'\tempcab\cabtemp.cab')
-
-    if os.path.exists(tempPath):
-        shutil.rmtree(tempPath )
+    tempPath = os.path.join(currerntDir,r'\tempcab')
+    #tempPath = currerntDir + r'\tempcab\cabtemp.cab'
+    # if os.path.exists(tempPath):
+    #     shutil.rmtree(tempPath )
+    if (u'static' in urlAddr):
+        if checkNet(cForm) == 0:
+            switchNet(1,cForm)
+            time.sleep(1)
+            if checkNet(cForm) == 1:
+                cForm.outLogPass(_tr(r'校验cab包，临时切换到外网'))
+            else:
+                cForm.outLogError(_tr(r'切换失败'))
+            changehost = True
     try:
         ret = urllib.urlretrieve(urlAddr, tempPath)
     except:
         return False
     cLen = int(ret[1].getheader('content-length'))
+    if changehost == True:
+        switchNet(0,cForm)
+        time.sleep(1)
+        if checkNet(cForm) == 0:
+                cForm.outLogPass(_tr(r'恢复内网HOST'))
+        else:
+            cForm.outLogError(_tr(r'切换失败'))
     return (os.path.exists(tempPath) and (os.path.getsize(tempPath) == cLen))
 
 def checkUrl(UrlAddr,cForm):
@@ -367,6 +383,7 @@ def checkUrl(UrlAddr,cForm):
         return False
     else:
         ret = (conn.getcode() == 200)
+        #print conn.getcode()
         conn.close()
         return ret
 
@@ -421,7 +438,7 @@ def checkPrivilegeJS(hRes, cForm):
         return True
 
     def _check_cnname():
-        if len(cnname.decode(sys.getfilesystemencoding())) > 10:
+        if len(cnname.decode(sys.getfilesystemencoding())) > 15:
             return (False, u'')
         return (True, cnname.decode(sys.getfilesystemencoding()))
 
@@ -558,28 +575,28 @@ def checkPrivilegeJS(hRes, cForm):
         result = True
         if endtime != 0:
             result = ((endtime > nowtime) and checkDateValid(dateStr) and (getDateNumberByDate(dateStr) == getDateNumberBySeconds(endtime + timeDiff)))
-            cForm.outLogError(_tr('pid为%s的项endtime不为空'%str(pid)))
+            #cForm.outLogError(_tr('pid为%s的项endtime不为空'%str(pid)))
         if (endtime != 0) and (0 <= endtime - nowtime < 6048000) and (kind == 1) :#游戏特权快到期
             cForm.outLogError(_tr('pid为%s的项endtime即将过期'%str(pid)))
             #sendEmail('特权', cnname, cForm)
             result = -1
 
-        if (endtime != 0) and (endtime - nowtime < 0)  :#游戏特权已经过期
-            #print '过期特权关闭'
-            cForm.outLogError(_tr('pid为%s的项endtime已经过期'%str(pid)))
-            if checkNet(cForm) == 0:
-                if md5Check.closePriv(0,cForm,pid):
-                    cForm.outLogError(_tr('内网的pid为%s的项endtime已经被关闭'%str(pid)))
-                    
-                else:
-                    cForm.outLogError(_tr('内网的pid为%s的项特权关闭出现问题'%str(pid)))
-                    
-                result = -1
-                
-            else:# 不关闭外网特权
-                #cForm.outLogError(_tr('外网的pid为%s的项过期，但是不会被被关闭'%str(pid)))
-                result = -1
-                
+        # if (endtime != 0) and (endtime - nowtime < 0)  :#游戏特权已经过期
+            # print '过期特权关闭'
+            # cForm.outLogError(_tr('pid为%s的项endtime已经过期'%str(pid)))
+            # if checkNet(cForm) == 0:
+            #     if md5Check.closePriv(0,cForm,pid):
+            #         cForm.outLogError(_tr('内网的pid为%s的项endtime已经被关闭'%str(pid)))
+            #
+            #     else:
+            #         cForm.outLogError(_tr('内网的pid为%s的项特权关闭出现问题'%str(pid)))
+            #
+            #     result = -1
+            #
+            # else:# 不关闭外网特权
+            #     #cForm.outLogError(_tr('外网的pid为%s的项过期，但是不会被被关闭'%str(pid)))
+            #     result = -1
+            #
             
         if endtime == 0:
             value = 0
@@ -642,7 +659,7 @@ def checkPrivilegeJS(hRes, cForm):
         if (not item.has_key('imgb')) or (type(item['imgb']) != unicode):
             cForm.outLogError(_tr('pid为%s的项imgb节点错误'%str(pid)))
             return False
-        return checkDownload(item['imgb'])
+        return checkDownload(item['imgb'],cForm)
 
     def _check_target(item):
         #Logger.printLog().Comment('校验pid为%s的target项'%str(pid))
@@ -654,7 +671,7 @@ def checkPrivilegeJS(hRes, cForm):
             return False
         url = item['url']
         if item['target'] == 'down':
-            return checkDownload(url)
+            return checkDownload(url,cForm)
         elif item['target'] == 'json':
             try:
                 urlDic = json.loads(url)
@@ -739,7 +756,7 @@ def checkPrivilegeJS(hRes, cForm):
                 ret['safeiconparam']['index'] = safeiconparam.has_key('index') and checkValueDuplicatePriv(safeiconparam['index'], 'index')
                 if safeiconparam.has_key('finishicon') and safeiconparam['finishicon']:
                     if safeiconparam['finishicon'].endswith(u'.cab'):
-                        ret['safeiconparam']['finishicon'] = checkDownload(safeiconparam['finishicon'])
+                        ret['safeiconparam']['finishicon'] = checkDownload(safeiconparam['finishicon'],cForm)
                     else:
                         ret['safeiconparam']['finishicon'] = True
                 else:
@@ -822,7 +839,7 @@ def checkPrivilegeJS(hRes, cForm):
 
 
     colItems = ['pid', '特权名称', '特权类型', '检测条件', '额外检测条件', '默认激活状态', '特权开启', '结束时间', '领取时限',
-                '等级限制', '领取限量', '特权cab包', '目标值', '消息已配置', '特权消息检测条件一致']
+                '等级限制', '领取限量', '特权cab包', '目标值']
     htmlOutput.writeTableHead(hRes, os.path.basename(f_JSprivilege), colItems)
     for item in dic_JSprivilege:
         if (not item.has_key('pid')) or (type(item['pid']) != unicode):
@@ -918,7 +935,7 @@ def checkTaskJS(hRes, cForm):
         return True
 
     def _check_cnname():#检查名称不能超过十个字符
-        if len(cnname.decode(sys.getfilesystemencoding())) > 10:
+        if len(cnname.decode(sys.getfilesystemencoding())) > 15:
             return (False, u'')
         return (True, cnname.decode(sys.getfilesystemencoding()))
 
@@ -1097,7 +1114,7 @@ def checkTaskJS(hRes, cForm):
                 cForm.outLogError(_tr('taskid为%s的项url节点错误'%str(taskid)))
                 return (False, target)
             url = item['url']
-            return (checkDownload(url), target)
+            return (checkDownload(url,cForm), target)
         elif item['target'] == 'json':
             if (not item.has_key('url')) or (type(item['url']) != unicode):
                 cForm.outLogError(_tr('taskid为%s的项url节点错误'%str(taskid)))
@@ -1166,7 +1183,7 @@ def checkTaskJS(hRes, cForm):
                 ret['safeiconparam']['index'] = safeiconparam.has_key('index') and checkValueDuplicatePriv(safeiconparam['index'], 'index')
                 if safeiconparam.has_key('finishicon') and safeiconparam['finishicon']:
                     if safeiconparam['finishicon'].endswith(u'.cab'):
-                        ret['safeiconparam']['finishicon'] = checkDownload(safeiconparam['finishicon'])
+                        ret['safeiconparam']['finishicon'] = checkDownload(safeiconparam['finishicon'],cForm)
                     else:
                         ret['safeiconparam']['finishicon'] = True
                 else:
@@ -1289,10 +1306,14 @@ def checkTaskJS(hRes, cForm):
         return (dependtask in taskidList)
 
     def _check_imgb(item):
-        if (not item.has_key('imgb')) or (type(item['imgb']) != unicode):
-            cForm.outLogError(_tr('taskid为%s的项imgb节点错误'%str(taskid)))
+        if (not item.has_key('imgb')):
+            cForm.outLogError(_tr('taskid为%s的项没有imgb'%str(taskid)))
             return False
-        return checkDownload(item['imgb'])
+        else:
+            if item['imgb'] == u'':
+                return True
+            else:
+                return checkDownload(item['imgb'],cForm)
 
     def _check_display(item):
         if (not item.has_key('display')) or (type(item['display']) != int):
